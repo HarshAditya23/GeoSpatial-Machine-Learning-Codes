@@ -1,43 +1,49 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Jul  5 16:45:56 2025
+
+@author: gaurh
+"""
+
 import json
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
+import os
 
-def json_to_pdf(json_file, pdf_file):
-    # Load JSON data
-    with open(json_file, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+def replace_tiff_with_png_in_json_files(folder_path):
+    # List all files in the folder
+    json_files = [f for f in os.listdir(folder_path) if f.endswith('.json')]
+    
+    # Loop through each JSON file
+    for json_file in json_files:
+        json_file_path = os.path.join(folder_path, json_file)
+        
+        # Read the content of the JSON file
+        try:
+            with open(json_file_path, 'r') as file:
+                data = json.load(file)
+            
+            # Get the list of image paths (assuming the JSON has the "images" key)
+            image_paths = data.get("images", [])
+            
+            # Replace .tiff extension with .png
+            updated_image_paths = []
+            for path in image_paths:
+                if path.endswith(".tiff") or path.endswith(".tif"):
+                    updated_image_paths.append(path.rsplit(".", 1)[0] + ".png")
+                else:
+                    updated_image_paths.append(path)
+            
+            # Update the JSON data with the new image paths
+            data["images"] = updated_image_paths
+            
+            # Save the updated JSON file
+            with open(json_file_path, 'w') as file:
+                json.dump(data, file, indent=4)
+            
+            print(f"Updated {json_file} with .png extensions.")
+        
+        except Exception as e:
+            print(f"Error processing {json_file}: {e}")
 
-    # Create a canvas for PDF
-    c = canvas.Canvas(pdf_file, pagesize=letter)
-    width, height = letter
-    y = height - 50  # start from top
-
-    # Write content
-    c.setFont("Helvetica", 12)
-    c.drawString(50, y, "JSON to PDF Output")
-    y -= 30
-
-    def write_dict(d, indent=0):
-        nonlocal y
-        for key, value in d.items():
-            line = " " * (indent * 4) + f"{key}: {value if not isinstance(value, dict) else ''}"
-            if y < 50:
-                c.showPage()
-                y = height - 50
-                c.setFont("Helvetica", 12)
-            c.drawString(50, y, line)
-            y -= 20
-            if isinstance(value, dict):
-                write_dict(value, indent + 1)
-
-    if isinstance(data, dict):
-        write_dict(data)
-    else:
-        c.drawString(50, y, str(data))
-
-    # Save PDF
-    c.save()
-    print(f"PDF saved as {pdf_file}")
-
-# Example usage
-json_to_pdf("dataset2.json", "output.pdf")
+# Example Usage:
+folder_path = "chunks"  # Folder containing the 13 JSON files
+replace_tiff_with_png_in_json_files(folder_path)
